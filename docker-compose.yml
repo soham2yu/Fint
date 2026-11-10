@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  fint-postgres:
+    image: postgres:16-alpine
+    container_name: fint-postgres
+    environment:
+      POSTGRES_DB: fint_db
+      POSTGRES_USER: fint_user
+      POSTGRES_PASSWORD: fint_secret_2026
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fint_user -d fint_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  fint-redis:
+    image: redis:7-alpine
+    container_name: fint-redis
+    ports:
+      - "6379:6379"
+
+  fint-backend:
+    build: ./backend
+    container_name: fint-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fint-postgres:5432/fint_db
+      SPRING_DATASOURCE_USERNAME: fint_user
+      SPRING_DATASOURCE_PASSWORD: fint_secret_2026
+    depends_on:
+      fint-postgres:
+        condition: service_healthy
+
+  fint-frontend:
+    image: nginx:alpine
+    container_name: fint-frontend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "3000:80"
